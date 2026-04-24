@@ -1,0 +1,422 @@
+import { useEffect, useMemo, useState } from 'react'
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  closestCorners,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  horizontalListSortingStrategy,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import type { BoardData, Card } from './types'
+import {
+  defaultBoard,
+  exportBoard,
+  importBoard,
+  loadBoard,
+  saveBoard,
+  uid,
+} from './storage'
+import { ColumnHeader, ColumnDragOverlay } from './components/ColumnHeader'
+import { SwimlaneRow, SwimlaneDragOverlay } from './components/SwimlaneRow'
+import { Cell } from './components/Cell'
+import { CardView, CardDragOverlay } from './components/CardView'
+import { CardModal } from './components/CardModal'
+
+export default function App() {
+  const [data, setData] = useState<BoardData>(() => loadBoard())
+  const [activeCardId, setActiveCardId] = useState<string | null>(null)
+
+  // Tracks whichever item is currently being dragged (for DragOverlay)
+  const [dragging, setDragging] = useState<{
+    type: string
+    id: string
+  } | null>(null)
+
+  useEffect(() => {
+    saveBoard(data)
+  }, [data])
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  )
+
+  const gridStyle = useMemo<React.CSSProperties>(
+    () => ({
+      gridTemplateColumns: `180px repeat(${data.columns.length}, minmax(240px, 1fr))`,
+    }),
+    [data.columns.length],
+  )
+
+  const columnIds = useMemo(() => data.columns.map((c) => c.id), [data.columns])
+  const swimlaneIds = useMemo(
+    () => data.swimlanes.map((l) => l.id),
+    [data.swimlanes],
+  )
+
+  function handleDragStart(event: DragStartEvent) {
+    setDragging({
+      type: String(event.active.data.current?.type ?? ''),
+      id: String(event.active.id),
+    })
+  }
+
+  function handleDragCancel() {
+    setDragging(null)
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setDragging(null)
+    const { active, over } = event
+    if (!over) return
+    const type = active.data.current?.type as string | undefined
+
+    if (type === 'column') {
+      if (active.id === over.id) return
+      const oldIdx = data.columns.findIndex((c) => c.id === active.id)
+      const newIdx = data.columns.findIndex((c) => c.id === over.id)
+      if (oldIdx < 0 || newIdx < 0) return
+      setData({ ...data, columns: arrayMove(data.columns, oldIdx, newIdx) })
+      return
+    }
+
+    if (type === 'swimlane') {
+      if (active.id === over.id) return
+      const oldIdx = data.swimlanes.findIndex((l) => l.id === active.id)
+      const newIdx = data.swimlanes.findIndex((l) => l.id === over.id)
+      if (oldIdx < 0 || newIdx < 0) return
+      setData({ ...data, swimlanes: arrayMove(data.swimlanes, oldIdx, newIdx) })
+      return
+    }
+
+    if (type === 'card') {
+      const activeCard = data.cards.find((c) => c.id === active.id)
+      if (!activeCard) return
+      const overType = over.data.current?.type as string | undefined
+
+      // Dropped on another card
+      if (overType === 'card') {
+        if (active.id === over.id) return
+        const overCard = data.cards.find((c) => c.id === over.id)
+        if (!overCard) return
+
+        const sameCell =
+          activeCard.columnId === overCard.columnId &&
+          activeCard.swimlaneId === overCard.swimlaneId
+
+        if (sameCell) {
+          // Reorder within the same cell — arrayMove on the global array
+          // preserves relative order within every other cell automatically.
+          const oldIdx = data.cards.findIndex((c) => c.id === active.id)
+          const newIdx = data.cards.findIndex((c) => c.id === over.id)
+          if (oldIdx < 0 || newIdx < 0 || oldIdx === newIdx) return
+          setData({ ...data, cards: arrayMove(data.cards, oldIdx, newIdx) })
+          return
+        }
+
+        // Cross-cell move: drop active before overCard and inherit its cell.
+        const remaining = data.cards.filter((c) => c.id !== active.id)
+        const updated: Card = {
+          ...activeCard,
+          columnId: overCard.columnId,
+          swimlaneId: overCard.swimlaneId,
+        }
+        const insertIdx = remaining.findIndex((c) => c.id === overCard.id)
+        remaining.splice(
+          insertIdx < 0 ? remaining.length : insertIdx,
+          0,
+          updated,
+        )
+        setData({ ...data, cards: remaining })
+        return
+      }
+
+      // Dropped on an (empty) cell
+      if (overType === 'cell') {
+        const targetColumnId = (over.data.current as { columnId: string })
+          .columnId
+        const targetSwimlaneId = (over.data.current as { swimlaneId: string })
+          .swimlaneId
+
+        // Ignore drops on the same cell (no reordering target)
+        if (
+          activeCard.columnId === targetColumnId &&
+          activeCard.swimlaneId === targetSwimlaneId
+        ) {
+          return
+        }
+
+        const remaining = data.cards.filter((c) => c.id !== active.id)
+        const updated: Card = {
+          ...activeCard,
+          columnId: targetColumnId,
+          swimlaneId: targetSwimlaneId,
+        }
+        let lastIdx = -1
+        remaining.forEach((c, i) => {
+          if (
+            c.columnId === targetColumnId &&
+            c.swimlaneId === targetSwimlaneId
+          ) {
+            lastIdx = i
+          }
+        })
+        remaining.splice(lastIdx + 1, 0, updated)
+        setData({ ...data, cards: remaining })
+        return
+      }
+    }
+  }
+
+  // --- mutations ---
+  function addColumn() {
+    setData({
+      ...data,
+      columns: [...data.columns, { id: uid(), name: 'New Column' }],
+    })
+  }
+
+  function addSwimlane() {
+    setData({
+      ...data,
+      swimlanes: [...data.swimlanes, { id: uid(), name: 'New Lane' }],
+    })
+  }
+
+  function renameColumn(id: string, name: string) {
+    setData({
+      ...data,
+      columns: data.columns.map((c) => (c.id === id ? { ...c, name } : c)),
+    })
+  }
+
+  function renameSwimlane(id: string, name: string) {
+    setData({
+      ...data,
+      swimlanes: data.swimlanes.map((l) =>
+        l.id === id ? { ...l, name } : l,
+      ),
+    })
+  }
+
+  function deleteColumn(id: string) {
+    const col = data.columns.find((c) => c.id === id)
+    if (!col) return
+    if (
+      !confirm(
+        `Delete column "${col.name}"? All cards in this column will be removed.`,
+      )
+    )
+      return
+    setData({
+      ...data,
+      columns: data.columns.filter((c) => c.id !== id),
+      cards: data.cards.filter((c) => c.columnId !== id),
+    })
+  }
+
+  function deleteSwimlane(id: string) {
+    const lane = data.swimlanes.find((l) => l.id === id)
+    if (!lane) return
+    if (
+      !confirm(
+        `Delete swimlane "${lane.name}"? All cards in this swimlane will be removed.`,
+      )
+    )
+      return
+    setData({
+      ...data,
+      swimlanes: data.swimlanes.filter((l) => l.id !== id),
+      cards: data.cards.filter((c) => c.swimlaneId !== id),
+    })
+  }
+
+  function addCard(columnId: string, swimlaneId: string) {
+    const newCard: Card = {
+      id: uid(),
+      columnId,
+      swimlaneId,
+      title: 'New card',
+      subtitle: '',
+      notes: '',
+    }
+    setData({ ...data, cards: [...data.cards, newCard] })
+    setActiveCardId(newCard.id)
+  }
+
+  function updateCard(id: string, updates: Partial<Card>) {
+    setData({
+      ...data,
+      cards: data.cards.map((c) => (c.id === id ? { ...c, ...updates } : c)),
+    })
+  }
+
+  function deleteCard(id: string) {
+    setData({ ...data, cards: data.cards.filter((c) => c.id !== id) })
+  }
+
+  async function handleImport() {
+    const imported = await importBoard()
+    if (imported && confirm('Replace current board with imported data?')) {
+      setData(imported)
+    }
+  }
+
+  function handleReset() {
+    if (
+      confirm(
+        'Reset to a blank board? This will delete all your current data.',
+      )
+    ) {
+      setData(defaultBoard())
+    }
+  }
+
+  const activeCard = activeCardId
+    ? data.cards.find((c) => c.id === activeCardId) ?? null
+    : null
+
+  return (
+    <>
+      <div className="toolbar">
+        <h1>Kanban</h1>
+        <button className="btn" onClick={addColumn}>
+          + Column
+        </button>
+        <button className="btn" onClick={addSwimlane}>
+          + Swimlane
+        </button>
+        <div className="spacer" />
+        <button
+          className="btn"
+          onClick={() => exportBoard(data)}
+          title="Download a backup JSON file"
+        >
+          Export
+        </button>
+        <button
+          className="btn"
+          onClick={handleImport}
+          title="Restore from a backup JSON file"
+        >
+          Import
+        </button>
+        <button
+          className="btn btn-subtle"
+          onClick={handleReset}
+          title="Reset to a blank board"
+        >
+          Reset
+        </button>
+      </div>
+
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        <div className="board">
+          <div className="header-row" style={gridStyle}>
+            <div className="corner" />
+            <SortableContext
+              items={columnIds}
+              strategy={horizontalListSortingStrategy}
+            >
+              {data.columns.map((col) => (
+                <ColumnHeader
+                  key={col.id}
+                  column={col}
+                  onRename={renameColumn}
+                  onDelete={deleteColumn}
+                />
+              ))}
+            </SortableContext>
+          </div>
+
+          <SortableContext
+            items={swimlaneIds}
+            strategy={verticalListSortingStrategy}
+          >
+            {data.swimlanes.map((lane) => (
+              <SwimlaneRow
+                key={lane.id}
+                lane={lane}
+                gridStyle={gridStyle}
+                onRename={renameSwimlane}
+                onDelete={deleteSwimlane}
+              >
+                {data.columns.map((col) => {
+                  const cellCards = data.cards.filter(
+                    (c) => c.columnId === col.id && c.swimlaneId === lane.id,
+                  )
+                  return (
+                    <Cell
+                      key={col.id}
+                      columnId={col.id}
+                      swimlaneId={lane.id}
+                      onAddCard={addCard}
+                    >
+                      <SortableContext
+                        items={cellCards.map((c) => c.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {cellCards.map((card) => (
+                          <CardView
+                            key={card.id}
+                            card={card}
+                            onOpen={setActiveCardId}
+                          />
+                        ))}
+                      </SortableContext>
+                    </Cell>
+                  )
+                })}
+              </SwimlaneRow>
+            ))}
+          </SortableContext>
+        </div>
+
+        <DragOverlay
+          dropAnimation={{
+            duration: 180,
+            easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+          }}
+        >
+          {dragging?.type === 'card' &&
+            (() => {
+              const card = data.cards.find((c) => c.id === dragging.id)
+              return card ? <CardDragOverlay card={card} /> : null
+            })()}
+          {dragging?.type === 'column' &&
+            (() => {
+              const col = data.columns.find((c) => c.id === dragging.id)
+              return col ? <ColumnDragOverlay name={col.name} /> : null
+            })()}
+          {dragging?.type === 'swimlane' &&
+            (() => {
+              const lane = data.swimlanes.find((l) => l.id === dragging.id)
+              return lane ? <SwimlaneDragOverlay name={lane.name} /> : null
+            })()}
+        </DragOverlay>
+      </DndContext>
+
+      {activeCard && (
+        <CardModal
+          card={activeCard}
+          onSave={(updates) => updateCard(activeCard.id, updates)}
+          onDelete={() => deleteCard(activeCard.id)}
+          onClose={() => setActiveCardId(null)}
+        />
+      )}
+    </>
+  )
+}
