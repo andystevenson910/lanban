@@ -6,16 +6,18 @@ import { getCardColor } from '../colors'
 interface Props {
   card: Card
   onOpen: (id: string) => void
+  timeLogging?: boolean
+  isTimerActive?: boolean
+  onToggleTimer?: (id: string) => void
 }
 
-/** Deterministic small rotation from card id so it's consistent on re-render. */
 function cardRotation(id: string): number {
   let h = 0
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffff
-  return ((h % 500) - 250) / 125 // –2 to +2 deg
+  return ((h % 500) - 250) / 125
 }
 
-export function CardView({ card, onOpen }: Props) {
+export function CardView({ card, onOpen, timeLogging, isTimerActive, onToggleTimer }: Props) {
   const {
     attributes,
     listeners,
@@ -33,14 +35,12 @@ export function CardView({ card, onOpen }: Props) {
   })
 
   const { bg } = getCardColor(card.color)
-
   const rotation = cardRotation(card.id)
-  const baseTransform = `rotate(${rotation}deg)`
 
   const style: React.CSSProperties = {
     transform: transform
       ? `${CSS.Transform.toString(transform)} rotate(${rotation}deg)`
-      : baseTransform,
+      : `rotate(${rotation}deg)`,
     transition,
     opacity: isDragging ? 0 : 1,
     pointerEvents: isDragging ? 'none' : undefined,
@@ -51,20 +51,32 @@ export function CardView({ card, onOpen }: Props) {
     <div
       ref={setNodeRef}
       style={style}
-      className="card"
+      className={`card${isTimerActive ? ' card-timer-active' : ''}`}
       {...attributes}
       {...listeners}
       onClick={() => {
         if (!isDragging) onOpen(card.id)
       }}
     >
+      {timeLogging && (
+        <button
+          className={`card-timer-btn${isTimerActive ? ' card-timer-btn-active' : ''}`}
+          title={isTimerActive ? 'Stop timer' : 'Start timer'}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleTimer?.(card.id)
+          }}
+        >
+          {isTimerActive ? '■' : '▶'}
+        </button>
+      )}
       <div className="card-title">{card.title || '(untitled)'}</div>
       {card.subtitle && <div className="card-subtitle">{card.subtitle}</div>}
     </div>
   )
 }
 
-/** Rendered inside DragOverlay — no listeners, just visuals. */
 export function CardDragOverlay({ card }: { card: Card }) {
   const { bg } = getCardColor(card.color)
   return (

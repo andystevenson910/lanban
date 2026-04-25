@@ -17,11 +17,33 @@ export interface Card {
   title: string
   subtitle: string
   notes: string
-  color?: string // id from CARD_COLORS, defaults to 'yellow'
+  color?: string
+}
+
+export interface Settings {
+  timeLogging: boolean
+}
+
+export interface TimeEntry {
+  id: ID
+  cardId: ID
+  cardTitle: string
+  startedAt: number
+  endedAt: number
+  note: string
+}
+
+export interface ActiveTimer {
+  cardId: ID
+  startedAt: number
 }
 
 export interface BoardData {
+  version: number
+  settings: Settings
+  activeTimer: ActiveTimer | null
   columns: Column[]
   swimlanes: Swimlane[]
   cards: Card[]
+  timeEntries: TimeEntry[]
 }

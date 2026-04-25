@@ -1,6 +1,24 @@
 import type { BoardData } from './types'
 
 const KEY = 'kanban_v1'
+export const CURRENT_VERSION = 2
+
+function migrate(raw: any): BoardData {
+  const version: number = raw.version ?? 0
+
+  if (version < 1) {
+    raw.version = 1
+  }
+
+  if (version < 2) {
+    raw.settings = raw.settings ?? { timeLogging: false }
+    raw.activeTimer = raw.activeTimer ?? null
+    raw.timeEntries = raw.timeEntries ?? []
+    raw.version = 2
+  }
+
+  return raw as BoardData
+}
 
 export const uid = (): string =>
   Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4)
@@ -11,6 +29,10 @@ export function defaultBoard(): BoardData {
   const c3 = uid()
   const lane = uid()
   return {
+    version: CURRENT_VERSION,
+    settings: { timeLogging: false },
+    activeTimer: null,
+    timeEntries: [],
     columns: [
       { id: c1, name: 'To Do' },
       { id: c2, name: 'In Progress' },
@@ -43,7 +65,7 @@ export function loadBoard(): BoardData {
       Array.isArray(parsed.swimlanes) &&
       Array.isArray(parsed.cards)
     ) {
-      return parsed as BoardData
+      return migrate(parsed)
     }
   } catch {
     // fall through
@@ -93,7 +115,7 @@ export function importBoard(): Promise<BoardData | null> {
           ) {
             throw new Error('Invalid file format')
           }
-          resolve(parsed as BoardData)
+          resolve(migrate(parsed))
         } catch (e) {
           alert('Failed to import: ' + (e as Error).message)
           resolve(null)
