@@ -2,13 +2,18 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   DndContext,
   DragEndEvent,
+  DragOverEvent,
   DragOverlay,
   DragStartEvent,
+  MeasuringStrategy,
   PointerSensor,
-  closestCorners,
+  pointerWithin,
+  closestCenter,
+  rectIntersection,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
+import type { CollisionDetection } from '@dnd-kit/core'
 import {
   SortableContext,
   arrayMove,
@@ -31,6 +36,16 @@ import { CardView, CardDragOverlay } from './components/CardView'
 import { CardModal } from './components/CardModal'
 import { SettingsModal } from './components/SettingsModal'
 import { TimeLog } from './components/TimeLog'
+
+// Forgiving collision: prefer zones the pointer is inside, fall back to
+// closest centre so you never have to hover over a precise spot.
+const collisionDetection: CollisionDetection = (args) => {
+  const inside = pointerWithin(args)
+  if (inside.length > 0) return inside
+  const rect = rectIntersection(args)
+  if (rect.length > 0) return rect
+  return closestCenter(args)
+}
 
 export default function App() {
   const [data, setData] = useState<BoardData>(() => loadBoard())
@@ -68,6 +83,76 @@ export default function App() {
     setDragging(null)
   }
 
+  // Live preview: move the card visually as you drag over cells/cards
+  function handleDragOver(event: DragOverEvent) {
+    const { active, over } = event
+    if (!over) return
+    const type = active.data.current?.type as string | undefined
+    if (type !== 'card') return
+
+    const activeCard = data.cards.find((c) => c.id === active.id)
+    if (!activeCard) return
+
+    const overType = over.data.current?.type as string | undefined
+
+    if (overType === 'card') {
+      if (active.id === over.id) return
+      const overCard = data.cards.find((c) => c.id === over.id)
+      if (!overCard) return
+
+      const sameCell =
+        activeCard.columnId === overCard.columnId &&
+        activeCard.swimlaneId === overCard.swimlaneId
+
+      if (sameCell) {
+        const oldIdx = data.cards.findIndex((c) => c.id === active.id)
+        const newIdx = data.cards.findIndex((c) => c.id === over.id)
+        if (oldIdx < 0 || newIdx < 0 || oldIdx === newIdx) return
+        setData((prev) => ({ ...prev, cards: arrayMove(prev.cards, oldIdx, newIdx) }))
+        return
+      }
+
+      // Moving to a different cell — place next to the hovered card
+      setData((prev) => {
+        const remaining = prev.cards.filter((c) => c.id !== active.id)
+        const updated: Card = {
+          ...activeCard,
+          columnId: overCard.columnId,
+          swimlaneId: overCard.swimlaneId,
+        }
+        const insertIdx = remaining.findIndex((c) => c.id === overCard.id)
+        remaining.splice(insertIdx < 0 ? remaining.length : insertIdx, 0, updated)
+        return { ...prev, cards: remaining }
+      })
+      return
+    }
+
+    if (overType === 'cell') {
+      const targetColumnId = (over.data.current as { columnId: string }).columnId
+      const targetSwimlaneId = (over.data.current as { swimlaneId: string }).swimlaneId
+
+      if (
+        activeCard.columnId === targetColumnId &&
+        activeCard.swimlaneId === targetSwimlaneId
+      ) return
+
+      setData((prev) => {
+        const remaining = prev.cards.filter((c) => c.id !== active.id)
+        const updated: Card = {
+          ...activeCard,
+          columnId: targetColumnId,
+          swimlaneId: targetSwimlaneId,
+        }
+        let lastIdx = -1
+        remaining.forEach((c, i) => {
+          if (c.columnId === targetColumnId && c.swimlaneId === targetSwimlaneId) lastIdx = i
+        })
+        remaining.splice(lastIdx + 1, 0, updated)
+        return { ...prev, cards: remaining }
+      })
+    }
+  }
+
   function handleDragEnd(event: DragEndEvent) {
     setDragging(null)
     const { active, over } = event
@@ -79,7 +164,7 @@ export default function App() {
       const oldIdx = data.columns.findIndex((c) => c.id === active.id)
       const newIdx = data.columns.findIndex((c) => c.id === over.id)
       if (oldIdx < 0 || newIdx < 0) return
-      setData({ ...data, columns: arrayMove(data.columns, oldIdx, newIdx) })
+      setData((prev) => ({ ...prev, columns: arrayMove(prev.columns, oldIdx, newIdx) }))
       return
     }
 
@@ -88,68 +173,12 @@ export default function App() {
       const oldIdx = data.swimlanes.findIndex((l) => l.id === active.id)
       const newIdx = data.swimlanes.findIndex((l) => l.id === over.id)
       if (oldIdx < 0 || newIdx < 0) return
-      setData({ ...data, swimlanes: arrayMove(data.swimlanes, oldIdx, newIdx) })
+      setData((prev) => ({ ...prev, swimlanes: arrayMove(prev.swimlanes, oldIdx, newIdx) }))
       return
     }
 
-    if (type === 'card') {
-      const activeCard = data.cards.find((c) => c.id === active.id)
-      if (!activeCard) return
-      const overType = over.data.current?.type as string | undefined
-
-      if (overType === 'card') {
-        if (active.id === over.id) return
-        const overCard = data.cards.find((c) => c.id === over.id)
-        if (!overCard) return
-
-        const sameCell =
-          activeCard.columnId === overCard.columnId &&
-          activeCard.swimlaneId === overCard.swimlaneId
-
-        if (sameCell) {
-          const oldIdx = data.cards.findIndex((c) => c.id === active.id)
-          const newIdx = data.cards.findIndex((c) => c.id === over.id)
-          if (oldIdx < 0 || newIdx < 0 || oldIdx === newIdx) return
-          setData({ ...data, cards: arrayMove(data.cards, oldIdx, newIdx) })
-          return
-        }
-
-        const remaining = data.cards.filter((c) => c.id !== active.id)
-        const updated: Card = {
-          ...activeCard,
-          columnId: overCard.columnId,
-          swimlaneId: overCard.swimlaneId,
-        }
-        const insertIdx = remaining.findIndex((c) => c.id === overCard.id)
-        remaining.splice(insertIdx < 0 ? remaining.length : insertIdx, 0, updated)
-        setData({ ...data, cards: remaining })
-        return
-      }
-
-      if (overType === 'cell') {
-        const targetColumnId = (over.data.current as { columnId: string }).columnId
-        const targetSwimlaneId = (over.data.current as { swimlaneId: string }).swimlaneId
-
-        if (
-          activeCard.columnId === targetColumnId &&
-          activeCard.swimlaneId === targetSwimlaneId
-        ) return
-
-        const remaining = data.cards.filter((c) => c.id !== active.id)
-        const updated: Card = {
-          ...activeCard,
-          columnId: targetColumnId,
-          swimlaneId: targetSwimlaneId,
-        }
-        let lastIdx = -1
-        remaining.forEach((c, i) => {
-          if (c.columnId === targetColumnId && c.swimlaneId === targetSwimlaneId) lastIdx = i
-        })
-        remaining.splice(lastIdx + 1, 0, updated)
-        setData({ ...data, cards: remaining })
-        return
-      }
-    }
+    // Card drops are fully handled by onDragOver for live preview;
+    // nothing extra needed here.
   }
 
   // --- board mutations ---
@@ -281,8 +310,11 @@ export default function App() {
 
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={collisionDetection}
+        measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+        autoScroll={{ threshold: { x: 0.2, y: 0.2 }, speed: { x: 8, y: 12 } }}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
