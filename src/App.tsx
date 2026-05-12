@@ -36,6 +36,7 @@ import { CardView, CardDragOverlay } from './components/CardView'
 import { CardModal } from './components/CardModal'
 import { SettingsModal } from './components/SettingsModal'
 import { TimeLog } from './components/TimeLog'
+import { ActiveTimerBar } from './components/ActiveTimerBar'
 
 // Forgiving collision: prefer zones the pointer is inside, fall back to
 // closest centre so you never have to hover over a precise spot.
@@ -244,7 +245,7 @@ export default function App() {
       cardTitle: card?.title ?? '(deleted)',
       startedAt: d.activeTimer.startedAt,
       endedAt: now,
-      note: '',
+      note: d.activeTimer.note,
     }
     return { activeTimer: null, timeEntries: [...d.timeEntries, entry] }
   }
@@ -259,16 +260,21 @@ export default function App() {
         ...data,
         ...stopped,
         timeEntries: stopped.timeEntries ?? data.timeEntries,
-        activeTimer: { cardId, startedAt: now },
+        activeTimer: { cardId, startedAt: now, note: '' },
       })
     }
+  }
+
+  function handleActiveTimerNoteChange(note: string) {
+    if (!data.activeTimer) return
+    setData({ ...data, activeTimer: { ...data.activeTimer, note } })
   }
 
   // --- settings ---
   function handleSaveSettings(s: Settings) {
     const now = Date.now()
     const stopped = !s.timeLogging && data.activeTimer ? stopTimer(data, now) : {}
-    setData({ ...data, ...stopped, settings: s })
+    setData({ ...data, ...stopped, timeEntries: (stopped as any).timeEntries ?? data.timeEntries, settings: s })
   }
 
   // --- time entries ---
@@ -307,6 +313,18 @@ export default function App() {
         <button className="btn" onClick={handleImport} title="Restore from a backup JSON file">Import</button>
         <button className="btn btn-subtle" onClick={handleReset} title="Reset to a blank board">Reset</button>
       </div>
+
+      {data.settings.timeLogging && data.activeTimer && (() => {
+        const timerCard = data.cards.find((c) => c.id === data.activeTimer!.cardId)
+        return (
+          <ActiveTimerBar
+            timer={data.activeTimer}
+            card={timerCard}
+            onStop={() => setData({ ...data, ...stopTimer(data, Date.now()) })}
+            onNoteChange={handleActiveTimerNoteChange}
+          />
+        )
+      })()}
 
       <DndContext
         sensors={sensors}

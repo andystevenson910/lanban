@@ -36,6 +36,7 @@ export interface TimeEntry {
 export interface ActiveTimer {
   cardId: ID
   startedAt: number
+  note: string
 }
 
 export interface BoardData {

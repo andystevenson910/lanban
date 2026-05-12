@@ -17,6 +17,10 @@ function migrate(raw: any): BoardData {
     raw.version = 2
   }
 
+  if (raw.activeTimer && raw.activeTimer.note === undefined) {
+    raw.activeTimer.note = ''
+  }
+
   return raw as BoardData
 }
 
