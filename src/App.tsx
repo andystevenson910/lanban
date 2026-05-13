@@ -309,8 +309,8 @@ export default function App() {
         <button className="btn" onClick={addSwimlane}>+ Swimlane</button>
         <div className="spacer" />
         <button className="btn" onClick={() => exportBoard(data)} title="Download a backup JSON file">Export</button>
-        <button className="btn" onClick={() => setSettingsOpen(true)} title="Settings">⚙</button>
         <button className="btn" onClick={handleImport} title="Restore from a backup JSON file">Import</button>
+        <button className="btn" onClick={() => setSettingsOpen(true)} title="Settings">⚙</button>
         <button className="btn btn-subtle" onClick={handleReset} title="Reset to a blank board">Reset</button>
       </div>
 

@@ -160,14 +160,14 @@ export function TimeLog({ entries, cards, onUpdate, onDelete }: Props) {
   return (
     <div className="time-log">
       <div className="time-log-heading">
-        Time Log
         <button
           className="time-log-sort-btn"
           onClick={() => setNewestFirst((v) => !v)}
-          title="Toggle sort order"
+          title={newestFirst ? 'Newest first — click for oldest first' : 'Oldest first — click for newest first'}
         >
-          {newestFirst ? '↓ Newest first' : '↑ Oldest first'}
+          {newestFirst ? '↓' : '↑'}
         </button>
+        Time Log
       </div>
       {sorted.map((entry) => {
         const card = cards.find((c) => c.id === entry.cardId)
