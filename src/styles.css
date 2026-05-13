@@ -645,6 +645,9 @@ input, textarea, button { font-family: inherit; color: inherit; }
   border-top: 1px solid rgba(0,0,0,0.07);
 }
 .time-log-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -652,6 +655,20 @@ input, textarea, button { font-family: inherit; color: inherit; }
   color: #bbb;
   margin-bottom: 10px;
 }
+.time-log-sort-btn {
+  background: transparent;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #bbb;
+  cursor: pointer;
+  text-transform: none;
+  transition: color 0.1s, border-color 0.1s;
+}
+.time-log-sort-btn:hover { color: #555; border-color: #aaa; }
 
 /* ── Time entry row ── */
 .time-entry {

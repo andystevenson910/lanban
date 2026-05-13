@@ -151,12 +151,25 @@ function TimeEntryRow({ entry, card, onUpdate, onDelete }: RowProps) {
 }
 
 export function TimeLog({ entries, cards, onUpdate, onDelete }: Props) {
+  const [newestFirst, setNewestFirst] = useState(true)
+
   if (entries.length === 0) return null
+
+  const sorted = newestFirst ? [...entries].reverse() : entries
 
   return (
     <div className="time-log">
-      <div className="time-log-heading">Time Log</div>
-      {entries.map((entry) => {
+      <div className="time-log-heading">
+        Time Log
+        <button
+          className="time-log-sort-btn"
+          onClick={() => setNewestFirst((v) => !v)}
+          title="Toggle sort order"
+        >
+          {newestFirst ? '↓ Newest first' : '↑ Oldest first'}
+        </button>
+      </div>
+      {sorted.map((entry) => {
         const card = cards.find((c) => c.id === entry.cardId)
         return (
           <TimeEntryRow
