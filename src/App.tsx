@@ -356,8 +356,10 @@ export default function App() {
           </div>
 
           <div className="board-scroll" ref={bodyScrollRef} onScroll={syncHeaderScroll}>
+            <div className="board-inner">
             <SortableContext items={swimlaneIds} strategy={verticalListSortingStrategy}>
-              {data.swimlanes.map((lane) => (
+              {data.swimlanes.map((lane, i) => (
+                <><div className={i === 0 ? 'lane-divider lane-divider-first' : 'lane-divider'} />
                 <SwimlaneRow
                   key={lane.id}
                   lane={lane}
@@ -386,9 +388,10 @@ export default function App() {
                       </Cell>
                     )
                   })}
-                </SwimlaneRow>
+                </SwimlaneRow></>
               ))}
             </SortableContext>
+            </div>
           </div>
         </div>
 

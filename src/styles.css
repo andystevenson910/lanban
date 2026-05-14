@@ -96,11 +96,17 @@ input, textarea, button { font-family: inherit; color: inherit; }
   flex: 1;
 }
 
+.board-inner {
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  min-width: 100%;
+}
+
 .header-row,
 .lane-row {
   display: grid;
   gap: 0;
-  min-width: 100%;
 }
 
 /* ── Column headers — floating labels, no box ── */
@@ -125,30 +131,27 @@ input, textarea, button { font-family: inherit; color: inherit; }
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1.2px;
-  background: #fff;
+  background: #ebebeb;
   border-radius: 3px;
   padding: 2px 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 .col-header .name-input:focus {
-  background: rgba(0,0,0,0.04);
+  background: #e0e0e0;
+}
+
+/* ── Lane dividers — separate element so they span full scroll width ── */
+.lane-divider {
+  border-top: 1px solid rgba(0,0,0,0.06);
+  margin: 4px 0;
+}
+.lane-divider-first {
+  border-top: none;
+  margin: 0;
 }
 
 /* ── Swimlane rows ── */
 .lane-row {
-  border-top: 1px solid rgba(0,0,0,0.06);
   padding-top: 4px;
-  margin-top: 4px;
-  /* extend border edge-to-edge despite parent padding */
-  margin-left: -24px;
-  margin-right: -24px;
-  padding-left: 24px;
-  padding-right: 24px;
-}
-.lane-row:first-of-type {
-  border-top: none;
-  padding-top: 0;
-  margin-top: 0;
 }
 
 .lane-header {
@@ -169,12 +172,11 @@ input, textarea, button { font-family: inherit; color: inherit; }
   text-transform: uppercase;
   letter-spacing: 0.8px;
   color: var(--label);
-  background: #fff;
+  background: #ebebeb;
   border-radius: 3px;
   padding: 2px 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
-.lane-name:focus { background: #fff; }
+.lane-name:focus { background: #e0e0e0; }
 
 /* ── Drag handles ── */
 .handle {
