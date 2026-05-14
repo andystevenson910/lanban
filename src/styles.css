@@ -132,13 +132,11 @@ input, textarea, button { font-family: inherit; color: inherit; }
   text-transform: uppercase;
   letter-spacing: 1.2px;
   background: #fff;
-  border: 1px solid rgba(0,0,0,0.1);
   border-radius: 3px;
   padding: 2px 6px;
 }
 .col-header .name-input:focus {
-  background: #fff;
-  border-color: #aaa;
+  background: #f5f5f5;
 }
 
 /* ── Lane dividers — separate element so they span full scroll width ── */
@@ -210,13 +208,11 @@ input, textarea, button { font-family: inherit; color: inherit; }
 
 .lane-header .name-input {
   background: #fff;
-  border: 1px solid rgba(0,0,0,0.1);
   border-radius: 3px;
   padding: 2px 6px;
 }
 .lane-header .name-input:focus {
-  background: #fff;
-  border-color: #aaa;
+  background: #f5f5f5;
 }
 
 .del-btn {

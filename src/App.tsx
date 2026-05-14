@@ -65,7 +65,7 @@ export default function App() {
 
   const gridStyle = useMemo<React.CSSProperties>(
     () => ({
-      gridTemplateColumns: `minmax(120px, max-content) repeat(${data.columns.length}, 260px)`,
+      gridTemplateColumns: `180px repeat(${data.columns.length}, 260px)`,
     }),
     [data.columns.length],
   )
