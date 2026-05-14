@@ -48,6 +48,7 @@ export function SwimlaneRow({
         <input
           className="name-input lane-name"
           value={lane.name}
+          size={Math.max(3, lane.name.length)}
           onChange={(e) => onRename(lane.id, e.target.value)}
           spellCheck={false}
           onPointerDown={(e) => e.stopPropagation()}

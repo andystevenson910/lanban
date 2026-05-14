@@ -37,6 +37,7 @@ export function ColumnHeader({ column, onRename, onDelete }: Props) {
       <input
         className="name-input"
         value={column.name}
+        size={Math.max(3, column.name.length)}
         onChange={(e) => onRename(column.id, e.target.value)}
         spellCheck={false}
         onPointerDown={(e) => e.stopPropagation()}
