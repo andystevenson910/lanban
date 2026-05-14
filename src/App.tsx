@@ -337,48 +337,50 @@ export default function App() {
         onDragCancel={handleDragCancel}
       >
         <div className="board">
-          <div className="header-row" style={gridStyle}>
-            <div className="corner" />
-            <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
-              {data.columns.map((col) => (
-                <ColumnHeader key={col.id} column={col} onRename={renameColumn} onDelete={deleteColumn} />
+          <div className="board-scroll">
+            <div className="header-row" style={gridStyle}>
+              <div className="corner" />
+              <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
+                {data.columns.map((col) => (
+                  <ColumnHeader key={col.id} column={col} onRename={renameColumn} onDelete={deleteColumn} />
+                ))}
+              </SortableContext>
+            </div>
+
+            <SortableContext items={swimlaneIds} strategy={verticalListSortingStrategy}>
+              {data.swimlanes.map((lane) => (
+                <SwimlaneRow
+                  key={lane.id}
+                  lane={lane}
+                  gridStyle={gridStyle}
+                  onRename={renameSwimlane}
+                  onDelete={deleteSwimlane}
+                >
+                  {data.columns.map((col) => {
+                    const cellCards = data.cards.filter(
+                      (c) => c.columnId === col.id && c.swimlaneId === lane.id,
+                    )
+                    return (
+                      <Cell key={col.id} columnId={col.id} swimlaneId={lane.id} onAddCard={addCard}>
+                        <SortableContext items={cellCards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                          {cellCards.map((card) => (
+                            <CardView
+                              key={card.id}
+                              card={card}
+                              onOpen={setActiveCardId}
+                              timeLogging={data.settings.timeLogging}
+                              isTimerActive={data.activeTimer?.cardId === card.id}
+                              onToggleTimer={handleToggleTimer}
+                            />
+                          ))}
+                        </SortableContext>
+                      </Cell>
+                    )
+                  })}
+                </SwimlaneRow>
               ))}
             </SortableContext>
           </div>
-
-          <SortableContext items={swimlaneIds} strategy={verticalListSortingStrategy}>
-            {data.swimlanes.map((lane) => (
-              <SwimlaneRow
-                key={lane.id}
-                lane={lane}
-                gridStyle={gridStyle}
-                onRename={renameSwimlane}
-                onDelete={deleteSwimlane}
-              >
-                {data.columns.map((col) => {
-                  const cellCards = data.cards.filter(
-                    (c) => c.columnId === col.id && c.swimlaneId === lane.id,
-                  )
-                  return (
-                    <Cell key={col.id} columnId={col.id} swimlaneId={lane.id} onAddCard={addCard}>
-                      <SortableContext items={cellCards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-                        {cellCards.map((card) => (
-                          <CardView
-                            key={card.id}
-                            card={card}
-                            onOpen={setActiveCardId}
-                            timeLogging={data.settings.timeLogging}
-                            isTimerActive={data.activeTimer?.cardId === card.id}
-                            onToggleTimer={handleToggleTimer}
-                          />
-                        ))}
-                      </SortableContext>
-                    </Cell>
-                  )
-                })}
-              </SwimlaneRow>
-            ))}
-          </SortableContext>
         </div>
 
         <DragOverlay
