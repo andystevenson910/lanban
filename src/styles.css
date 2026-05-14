@@ -81,9 +81,17 @@ input, textarea, button { font-family: inherit; color: inherit; }
   flex-direction: column;
 }
 
+.board-header-scroll {
+  overflow-x: hidden;
+  padding: 20px 24px 0;
+  position: sticky;
+  top: 42px;
+  z-index: 8;
+}
+
 .board-scroll {
   overflow-x: auto;
-  padding: 20px 24px 0;
+  padding: 0 24px 0;
   flex: 1;
 }
 
@@ -94,18 +102,8 @@ input, textarea, button { font-family: inherit; color: inherit; }
   min-width: 100%;
 }
 
-.header-row {
-  position: sticky;
-  top: 42px;
-  z-index: 8;
-}
-
 /* ── Column headers — floating labels, no box ── */
-.corner {
-  position: sticky;
-  left: 0;
-  z-index: 9;
-}
+.corner { /* empty spacer */ }
 
 .col-header {
   display: flex;
@@ -153,7 +151,7 @@ input, textarea, button { font-family: inherit; color: inherit; }
   color: var(--label);
   position: sticky;
   left: 0;
-  z-index: 3;
+  z-index: 20;
 }
 .lane-name {
   font-size: 12px;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   DndContext,
   DragEndEvent,
@@ -72,6 +72,13 @@ export default function App() {
 
   const columnIds = useMemo(() => data.columns.map((c) => c.id), [data.columns])
   const swimlaneIds = useMemo(() => data.swimlanes.map((l) => l.id), [data.swimlanes])
+
+  const headerScrollRef = useRef<HTMLDivElement>(null)
+  const bodyScrollRef = useRef<HTMLDivElement>(null)
+
+  function syncHeaderScroll(e: React.UIEvent<HTMLDivElement>) {
+    if (headerScrollRef.current) headerScrollRef.current.scrollLeft = e.currentTarget.scrollLeft
+  }
 
   function handleDragStart(event: DragStartEvent) {
     setDragging({
@@ -337,7 +344,7 @@ export default function App() {
         onDragCancel={handleDragCancel}
       >
         <div className="board">
-          <div className="board-scroll">
+          <div className="board-header-scroll" ref={headerScrollRef}>
             <div className="header-row" style={gridStyle}>
               <div className="corner" />
               <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
@@ -346,7 +353,9 @@ export default function App() {
                 ))}
               </SortableContext>
             </div>
+          </div>
 
+          <div className="board-scroll" ref={bodyScrollRef} onScroll={syncHeaderScroll}>
             <SortableContext items={swimlaneIds} strategy={verticalListSortingStrategy}>
               {data.swimlanes.map((lane) => (
                 <SwimlaneRow
