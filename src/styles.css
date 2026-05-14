@@ -87,6 +87,7 @@ input, textarea, button { font-family: inherit; color: inherit; }
   position: sticky;
   top: 42px;
   z-index: 8;
+  border-bottom: 1px solid rgba(0,0,0,0.07);
 }
 
 .board-scroll {
@@ -110,7 +111,8 @@ input, textarea, button { font-family: inherit; color: inherit; }
   align-items: center;
   gap: 4px;
   padding: 6px 16px 10px;
-  background: transparent;
+  background: rgba(0,0,0,0.025);
+  border-radius: 4px 4px 0 0;
   border: none;
   color: var(--label);
   font-size: 11px;
@@ -134,6 +136,11 @@ input, textarea, button { font-family: inherit; color: inherit; }
   border-top: 1px solid rgba(0,0,0,0.06);
   padding-top: 4px;
   margin-top: 4px;
+  /* extend border edge-to-edge despite parent padding */
+  margin-left: -24px;
+  margin-right: -24px;
+  padding-left: 24px;
+  padding-right: 24px;
 }
 .lane-row:first-of-type {
   border-top: none;
@@ -146,7 +153,8 @@ input, textarea, button { font-family: inherit; color: inherit; }
   align-items: flex-start;
   gap: 4px;
   padding: 12px 8px 12px 0;
-  background: transparent;
+  background: rgba(0,0,0,0.025);
+  border-radius: 0 4px 4px 0;
   border: none;
   color: var(--label);
   position: sticky;
