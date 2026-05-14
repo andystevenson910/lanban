@@ -48,6 +48,14 @@ const collisionDetection: CollisionDetection = (args) => {
   return closestCenter(args)
 }
 
+const _measureCanvas = document.createElement('canvas')
+function measureColWidth(name: string, fontSize: number, letterSpacing: number, overhead: number): number {
+  const ctx = _measureCanvas.getContext('2d')!
+  ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif`
+  const textW = ctx.measureText(name.toUpperCase()).width + name.length * letterSpacing
+  return Math.max(fontSize === 12 ? 180 : 260, Math.ceil(textW) + overhead)
+}
+
 export default function App() {
   const [data, setData] = useState<BoardData>(() => loadBoard())
   const [activeCardId, setActiveCardId] = useState<string | null>(null)
@@ -63,12 +71,13 @@ export default function App() {
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   )
 
-  const gridStyle = useMemo<React.CSSProperties>(
-    () => ({
-      gridTemplateColumns: `180px repeat(${data.columns.length}, 260px)`,
-    }),
-    [data.columns.length],
-  )
+  const gridStyle = useMemo<React.CSSProperties>(() => {
+    const laneColW = Math.max(180, ...data.swimlanes.map(l =>
+      measureColWidth(l.name, 12, 0.8, 52)
+    ))
+    const colWs = data.columns.map(c => measureColWidth(c.name, 11, 1.2, 52))
+    return { gridTemplateColumns: `${laneColW}px ${colWs.map(w => `${w}px`).join(' ')}` }
+  }, [data.swimlanes, data.columns])
 
   const columnIds = useMemo(() => data.columns.map((c) => c.id), [data.columns])
   const swimlaneIds = useMemo(() => data.swimlanes.map((l) => l.id), [data.swimlanes])
