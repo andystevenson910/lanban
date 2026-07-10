@@ -29,6 +29,7 @@ import {
   saveBoard,
   uid,
 } from './storage'
+import { CARD_COLORS } from './colors'
 import { ColumnHeader, ColumnDragOverlay } from './components/ColumnHeader'
 import { SwimlaneRow, SwimlaneDragOverlay } from './components/SwimlaneRow'
 import { Cell } from './components/Cell'
@@ -60,6 +61,7 @@ export default function App() {
   const [data, setData] = useState<BoardData>(() => loadBoard())
   const [activeCardId, setActiveCardId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [filterColors, setFilterColors] = useState<Set<string>>(new Set())
 
   const [dragging, setDragging] = useState<{ type: string; id: string } | null>(null)
 
@@ -315,19 +317,47 @@ export default function App() {
     if (confirm('Reset to a blank board? This will delete all your current data.')) setData(defaultBoard())
   }
 
+  // --- color filter ---
+  function toggleColorFilter(colorId: string) {
+    setFilterColors(prev => {
+      const next = new Set(prev)
+      if (next.has(colorId)) next.delete(colorId)
+      else next.add(colorId)
+      return next
+    })
+  }
+
   const activeCard = activeCardId ? data.cards.find((c) => c.id === activeCardId) ?? null : null
 
   return (
     <>
       <div className="toolbar">
-        <h1>Kanban</h1>
-        <button className="btn" onClick={addColumn}>+ Column</button>
-        <button className="btn" onClick={addSwimlane}>+ Swimlane</button>
-        <div className="spacer" />
-        <button className="btn" onClick={() => exportBoard(data)} title="Download a backup JSON file">Export</button>
-        <button className="btn" onClick={handleImport} title="Restore from a backup JSON file">Import</button>
-        <button className="btn" onClick={() => setSettingsOpen(true)} title="Settings">⚙</button>
-        <button className="btn btn-subtle" onClick={handleReset} title="Reset to a blank board">Reset</button>
+        <div className="toolbar-left">
+          <h1>Kanban</h1>
+          <button className="btn" onClick={addColumn}>+ Column</button>
+          <button className="btn" onClick={addSwimlane}>+ Swimlane</button>
+        </div>
+        <div className="toolbar-center">
+          <button
+            className={`cf-all${filterColors.size === 0 ? ' cf-active' : ''}`}
+            onClick={() => setFilterColors(new Set())}
+          >All</button>
+          {CARD_COLORS.map(c => (
+            <button
+              key={c.id}
+              className={`cf-swatch${filterColors.has(c.id) ? ' cf-active' : ''}`}
+              style={{ background: c.bg }}
+              title={c.label}
+              onClick={() => toggleColorFilter(c.id)}
+            />
+          ))}
+        </div>
+        <div className="toolbar-right">
+          <button className="btn" onClick={() => exportBoard(data)} title="Download a backup JSON file">Export</button>
+          <button className="btn" onClick={handleImport} title="Restore from a backup JSON file">Import</button>
+          <button className="btn" onClick={() => setSettingsOpen(true)} title="Settings">⚙</button>
+          <button className="btn btn-subtle" onClick={handleReset} title="Reset to a blank board">Reset</button>
+        </div>
       </div>
 
       {data.settings.timeLogging && data.activeTimer && (() => {
@@ -378,7 +408,8 @@ export default function App() {
                 >
                   {data.columns.map((col) => {
                     const cellCards = data.cards.filter(
-                      (c) => c.columnId === col.id && c.swimlaneId === lane.id,
+                      (c) => c.columnId === col.id && c.swimlaneId === lane.id &&
+                        (filterColors.size === 0 || filterColors.has(c.color ?? 'yellow')),
                     )
                     return (
                       <Cell key={col.id} columnId={col.id} swimlaneId={lane.id} onAddCard={addCard}>

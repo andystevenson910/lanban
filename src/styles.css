@@ -27,10 +27,10 @@ input, textarea, button { font-family: inherit; color: inherit; }
 
 /* ── Toolbar ── */
 .toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
+  padding: 8px 16px;
   background: var(--toolbar-bg);
   position: sticky;
   top: 0;
@@ -45,14 +45,64 @@ input, textarea, button { font-family: inherit; color: inherit; }
   height: 1px;
   background: var(--toolbar-border);
 }
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.toolbar-center {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  justify-content: center;
+}
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
 .toolbar h1 {
   font-size: 14px;
   font-weight: 600;
-  margin: 0 10px 0 0;
+  margin: 0 6px 0 0;
   letter-spacing: -0.2px;
   color: #555;
 }
-.toolbar .spacer { flex: 1; }
+
+/* ── Color filter bar ── */
+.cf-all {
+  background: transparent;
+  border: 1.5px solid #ccc9c3;
+  border-radius: 4px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #999;
+  cursor: pointer;
+  transition: all 0.1s;
+  letter-spacing: 0.3px;
+}
+.cf-all:hover:not(.cf-active) { border-color: #999; color: #555; }
+.cf-all.cf-active { background: #333; color: #fff; border-color: #333; }
+
+.cf-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s, border-color 0.1s, box-shadow 0.1s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.13);
+  flex-shrink: 0;
+}
+.cf-swatch:hover { transform: scale(1.2); box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+.cf-swatch.cf-active {
+  border-color: #333;
+  transform: scale(1.15);
+  box-shadow: 0 0 0 1px #333, 0 2px 6px rgba(0,0,0,0.2);
+}
 
 .btn {
   background: rgba(255,255,255,0.55);
