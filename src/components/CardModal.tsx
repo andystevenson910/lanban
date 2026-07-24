@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Card } from '../types'
-import { CARD_COLORS, DEFAULT_COLOR, getCardColor } from '../colors'
+import { CARD_COLORS, DEFAULT_COLOR, RAINBOW_COLOR, getCardColor } from '../colors'
 
 interface Props {
   card: Card
@@ -39,6 +39,9 @@ export function CardModal({ card, onSave, onDelete, onClose }: Props) {
   const [subtitle, setSubtitle] = useState(card.subtitle)
   const [notes, setNotes] = useState(card.notes)
   const [color, setColor] = useState(card.color ?? DEFAULT_COLOR)
+  const [triedColors, setTriedColors] = useState<Set<string>>(
+    () => new Set([card.color ?? DEFAULT_COLOR]),
+  )
   const [notesEditing, setNotesEditing] = useState(false)
   const notesRef = useRef<HTMLTextAreaElement>(null)
 
@@ -47,6 +50,7 @@ export function CardModal({ card, onSave, onDelete, onClose }: Props) {
     setSubtitle(card.subtitle)
     setNotes(card.notes)
     setColor(card.color ?? DEFAULT_COLOR)
+    setTriedColors(new Set([card.color ?? DEFAULT_COLOR]))
     setNotesEditing(false)
   }, [card.id])
 
@@ -78,16 +82,26 @@ export function CardModal({ card, onSave, onDelete, onClose }: Props) {
     if (confirm('Delete this card?')) { onDelete(); onClose() }
   }
 
+  function pickColor(id: string) {
+    setColor(id)
+    setTriedColors((prev) => (prev.has(id) ? prev : new Set(prev).add(id)))
+  }
+
   const { bg } = getCardColor(color)
   const segments = linkify(notes)
   const hasNotes = notes.trim().length > 0
+  const isRainbow = color === RAINBOW_COLOR.id
+  const rainbowUnlocked = isRainbow || CARD_COLORS.every((c) => triedColors.has(c.id))
 
   return (
     <>
       <div className="backdrop" onClick={onClose} />
       <div className="modal" role="dialog" aria-modal="true">
         {/* Color stripe at top, matches the card */}
-        <div className="modal-stripe" style={{ background: bg }} />
+        <div
+          className={`modal-stripe${isRainbow ? ' card-rainbow' : ''}`}
+          style={isRainbow ? undefined : { background: bg }}
+        />
 
         <input
           className="modal-title"
@@ -110,11 +124,20 @@ export function CardModal({ card, onSave, onDelete, onClose }: Props) {
               key={c.id}
               className={`color-swatch${color === c.id ? ' swatch-selected' : ''}`}
               style={{ background: c.bg }}
-              onClick={() => setColor(c.id)}
+              onClick={() => pickColor(c.id)}
               title={c.label}
               type="button"
             />
           ))}
+          {rainbowUnlocked && (
+            <button
+              key={RAINBOW_COLOR.id}
+              className={`color-swatch rainbow-swatch${isRainbow ? ' swatch-selected' : ''}`}
+              onClick={() => pickColor(RAINBOW_COLOR.id)}
+              title="Rainbow ✨ (you found it!)"
+              type="button"
+            />
+          )}
         </div>
 
         <div className="notes-label">Notes</div>

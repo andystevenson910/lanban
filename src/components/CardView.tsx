@@ -35,6 +35,7 @@ export function CardView({ card, onOpen, timeLogging, isTimerActive, onToggleTim
   })
 
   const { bg } = getCardColor(card.color)
+  const isRainbow = card.color === 'rainbow'
   const rotation = cardRotation(card.id)
 
   const style: React.CSSProperties = {
@@ -44,14 +45,14 @@ export function CardView({ card, onOpen, timeLogging, isTimerActive, onToggleTim
     transition,
     opacity: isDragging ? 0 : 1,
     pointerEvents: isDragging ? 'none' : undefined,
-    background: bg,
+    background: isRainbow ? undefined : bg,
   }
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`card${isTimerActive ? ' card-timer-active' : ''}`}
+      className={`card${isTimerActive ? ' card-timer-active' : ''}${isRainbow ? ' card-rainbow' : ''}`}
       {...attributes}
       {...listeners}
       onClick={() => {
@@ -79,8 +80,12 @@ export function CardView({ card, onOpen, timeLogging, isTimerActive, onToggleTim
 
 export function CardDragOverlay({ card }: { card: Card }) {
   const { bg } = getCardColor(card.color)
+  const isRainbow = card.color === 'rainbow'
   return (
-    <div className="card card-dragging" style={{ background: bg }}>
+    <div
+      className={`card card-dragging${isRainbow ? ' card-rainbow' : ''}`}
+      style={{ background: isRainbow ? undefined : bg }}
+    >
       <div className="card-title">{card.title || '(untitled)'}</div>
       {card.subtitle && <div className="card-subtitle">{card.subtitle}</div>}
     </div>
