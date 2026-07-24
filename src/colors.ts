@@ -16,8 +16,12 @@ export const CARD_COLORS: CardColor[] = [
   { id: 'white',  bg: '#f0f0ee', label: 'White' },
 ]
 
+// Hidden easter-egg color — unlocked in the edit modal by trying every color above.
+export const RAINBOW_COLOR: CardColor = { id: 'rainbow', bg: '#ffffff', label: 'Rainbow' }
+
 export const DEFAULT_COLOR = 'yellow'
 
 export function getCardColor(id?: string): CardColor {
+  if (id === RAINBOW_COLOR.id) return RAINBOW_COLOR
   return CARD_COLORS.find((c) => c.id === id) ?? CARD_COLORS[0]
 }

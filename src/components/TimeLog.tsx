@@ -54,6 +54,7 @@ function TimeEntryRow({ entry, card, onUpdate, onDelete }: RowProps) {
   }, [entry.note, noteFocused])
 
   const { bg } = getCardColor(card?.color)
+  const isRainbow = card?.color === 'rainbow'
 
   function startEdit(field: 'title' | 'startedAt' | 'endedAt') {
     if (field === 'title') setDraftTitle(entry.cardTitle)
@@ -81,7 +82,7 @@ function TimeEntryRow({ entry, card, onUpdate, onDelete }: RowProps) {
 
   return (
     <div className="time-entry">
-      <div className="te-dot" style={{ background: bg }} />
+      <div className={`te-dot${isRainbow ? ' card-rainbow' : ''}`} style={{ background: isRainbow ? undefined : bg }} />
 
       <div className="te-title">
         {editing === 'title' ? (

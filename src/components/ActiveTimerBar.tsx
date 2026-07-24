@@ -30,10 +30,11 @@ export function ActiveTimerBar({ timer, card, onStop, onNoteChange }: Props) {
   useEffect(() => { setNote(timer.note) }, [timer.note])
 
   const { bg } = getCardColor(card?.color)
+  const isRainbow = card?.color === 'rainbow'
 
   return (
     <div className="active-timer-bar">
-      <div className="atb-dot" style={{ background: bg }} />
+      <div className={`atb-dot${isRainbow ? ' card-rainbow' : ''}`} style={{ background: isRainbow ? undefined : bg }} />
       <span className="atb-title">{card?.title ?? '(deleted)'}</span>
       <span className="atb-elapsed">{formatElapsed(now - timer.startedAt)}</span>
       <input
