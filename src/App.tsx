@@ -20,13 +20,14 @@ import {
   horizontalListSortingStrategy,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import type { BoardData, Card, Settings, TimeEntry } from './types'
+import type { BoardData, Card, MultiBoard, NamedBoard, Settings, TimeEntry } from './types'
 import {
   defaultBoard,
+  defaultMultiBoard,
   exportBoard,
   importBoard,
-  loadBoard,
-  saveBoard,
+  loadMultiBoard,
+  saveMultiBoard,
   uid,
 } from './storage'
 import { CARD_COLORS } from './colors'
@@ -58,16 +59,30 @@ function measureColWidth(name: string, fontSize: number, letterSpacing: number, 
 }
 
 export default function App() {
-  const [data, setData] = useState<BoardData>(() => loadBoard())
+  const [multiBoard, setMultiBoard] = useState<MultiBoard>(() => loadMultiBoard())
   const [activeCardId, setActiveCardId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [filterColors, setFilterColors] = useState<Set<string>>(new Set())
 
   const [dragging, setDragging] = useState<{ type: string; id: string } | null>(null)
 
+  const activeBoard = multiBoard.boards.find(b => b.id === multiBoard.activeId) ?? multiBoard.boards[0]
+  const data = activeBoard.data
+
+  function setData(updater: BoardData | ((prev: BoardData) => BoardData)) {
+    setMultiBoard(prev => {
+      const cur = (prev.boards.find(b => b.id === prev.activeId) ?? prev.boards[0]).data
+      const newData = typeof updater === 'function' ? updater(cur) : updater
+      return {
+        ...prev,
+        boards: prev.boards.map(b => b.id === prev.activeId ? { ...b, data: newData } : b),
+      }
+    })
+  }
+
   useEffect(() => {
-    saveBoard(data)
-  }, [data])
+    saveMultiBoard(multiBoard)
+  }, [multiBoard])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -307,14 +322,47 @@ export default function App() {
     setData({ ...data, timeEntries: data.timeEntries.filter((e) => e.id !== id) })
   }
 
+  // --- multi-board management ---
+  function addBoard() {
+    const id = uid()
+    const newBoard: NamedBoard = { id, name: `Board ${multiBoard.boards.length + 1}`, data: defaultBoard() }
+    setMultiBoard(prev => ({ ...prev, boards: [...prev.boards, newBoard], activeId: id }))
+  }
+
+  function cycleBoard(dir: 1 | -1) {
+    setMultiBoard(prev => {
+      const idx = prev.boards.findIndex(b => b.id === prev.activeId)
+      const nextIdx = (idx + dir + prev.boards.length) % prev.boards.length
+      return { ...prev, activeId: prev.boards[nextIdx].id }
+    })
+  }
+
+  function renameBoard(id: string, name: string) {
+    setMultiBoard(prev => ({
+      ...prev,
+      boards: prev.boards.map(b => b.id === id ? { ...b, name } : b),
+    }))
+  }
+
+  function deleteBoard(id: string) {
+    if (multiBoard.boards.length <= 1) return
+    const board = multiBoard.boards.find(b => b.id === id)
+    if (!confirm(`Delete board "${board?.name}"? All cards in this board will be removed.`)) return
+    setMultiBoard(prev => {
+      const remaining = prev.boards.filter(b => b.id !== id)
+      const newActiveId = id === prev.activeId ? remaining[0].id : prev.activeId
+      return { ...prev, boards: remaining, activeId: newActiveId }
+    })
+  }
+
   // --- import/reset ---
   async function handleImport() {
     const imported = await importBoard()
-    if (imported && confirm('Replace current board with imported data?')) setData(imported)
+    if (imported && confirm('Replace this board with imported data?')) setData(imported)
   }
 
   function handleReset() {
-    if (confirm('Reset to a blank board? This will delete all your current data.')) setData(defaultBoard())
+    if (confirm('Reset this board to blank? This will delete all cards on this board.')) setData(defaultBoard())
   }
 
   // --- color filter ---
@@ -385,7 +433,41 @@ export default function App() {
         <div className="board">
           <div className="board-header-scroll" ref={headerScrollRef}>
             <div className="header-row" style={gridStyle}>
-              <div className="corner" />
+              <div className="corner">
+                <button
+                  className="board-cycle"
+                  onClick={() => cycleBoard(-1)}
+                  title="Previous board"
+                  style={{ visibility: multiBoard.boards.length <= 1 ? 'hidden' : 'visible' }}
+                >‹</button>
+                <input
+                  className="name-input"
+                  value={activeBoard.name}
+                  onChange={(e) => renameBoard(multiBoard.activeId, e.target.value)}
+                  spellCheck={false}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  title="Board name"
+                />
+                <button
+                  className="board-cycle"
+                  onClick={() => cycleBoard(1)}
+                  title="Next board"
+                  style={{ visibility: multiBoard.boards.length <= 1 ? 'hidden' : 'visible' }}
+                >›</button>
+                <button
+                  className="board-cycle"
+                  onClick={addBoard}
+                  title="Add new board"
+                >+</button>
+                {multiBoard.boards.length > 1 && (
+                  <button
+                    className="del-btn"
+                    onClick={() => deleteBoard(multiBoard.activeId)}
+                    title="Delete this board"
+                    onPointerDown={(e) => e.stopPropagation()}
+                  >×</button>
+                )}
+              </div>
               <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
                 {data.columns.map((col) => (
                   <ColumnHeader key={col.id} column={col} onRename={renameColumn} onDelete={deleteColumn} />

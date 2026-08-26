@@ -48,3 +48,15 @@ export interface BoardData {
   cards: Card[]
   timeEntries: TimeEntry[]
 }
+
+export interface NamedBoard {
+  id: ID
+  name: string
+  data: BoardData
+}
+
+export interface MultiBoard {
+  version: number
+  activeId: ID
+  boards: NamedBoard[]
+}

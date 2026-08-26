@@ -1,6 +1,7 @@
-import type { BoardData } from './types'
+import type { BoardData, MultiBoard, NamedBoard } from './types'
 
 const KEY = 'kanban_v1'
+const MULTI_KEY = 'kanban_multi_v1'
 export const CURRENT_VERSION = 2
 
 function migrate(raw: any): BoardData {
@@ -55,6 +56,51 @@ export function defaultBoard(): BoardData {
         color: 'yellow',
       },
     ],
+  }
+}
+
+export function defaultMultiBoard(): MultiBoard {
+  const id = uid()
+  return {
+    version: 1,
+    activeId: id,
+    boards: [{ id, name: 'Board 1', data: defaultBoard() } as NamedBoard],
+  }
+}
+
+export function loadMultiBoard(): MultiBoard {
+  try {
+    const raw = localStorage.getItem(MULTI_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (parsed && Array.isArray(parsed.boards) && parsed.activeId) {
+        parsed.boards = (parsed.boards as NamedBoard[]).map(b => ({ ...b, data: migrate(b.data) }))
+        return parsed as MultiBoard
+      }
+    }
+  } catch {}
+  try {
+    const legacyRaw = localStorage.getItem(KEY)
+    if (legacyRaw) {
+      const parsed = JSON.parse(legacyRaw)
+      if (parsed && Array.isArray(parsed.columns) && Array.isArray(parsed.swimlanes)) {
+        const id = uid()
+        return {
+          version: 1,
+          activeId: id,
+          boards: [{ id, name: 'Board 1', data: migrate(parsed) }],
+        }
+      }
+    }
+  } catch {}
+  return defaultMultiBoard()
+}
+
+export function saveMultiBoard(mb: MultiBoard): void {
+  try {
+    localStorage.setItem(MULTI_KEY, JSON.stringify(mb))
+  } catch (err) {
+    console.error('Failed to save', err)
   }
 }
 
